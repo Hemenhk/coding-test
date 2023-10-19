@@ -173,6 +173,7 @@ export default function UrlStatusForm() {
           <p className="text-red-500">No match found for the entered URL.</p>
         )}
         {!isLoading &&
+          isMatch &&
           urlInfo &&
           urlInfo.map((item: FormData) => (
             <UrlCard key={item.id} url={item.url} fileType={item.fileType} />
