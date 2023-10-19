@@ -78,31 +78,41 @@ export default function UrlStatusForm() {
     const newAbortController = new AbortController();
     setAbortController(newAbortController);
 
-    const loadUrls = async () => {
-      setIsLoading(true);
+    setUrlInfo([]);
+    setIsMatch(false);
 
-      try {
-        const urls = await fetchURLS(
-          debouncedSearch,
-          newAbortController.signal
-        );
+    if (form.formState.isValid) {
+      const loadUrls = async () => {
+        setIsLoading(true);
 
-        if (search.trim() === debouncedSearch.trim()) {
-          setUrlInfo(urls);
+        try {
+          const urls = await fetchURLS(
+            debouncedSearch,
+            newAbortController.signal
+          );
 
-          if (debouncedSearch && urls.length === 0) {
-            setIsMatch(false);
-          } else {
-            setIsMatch(true);
+          if (search.trim() === debouncedSearch.trim()) {
+            setUrlInfo(urls);
+
+            if (debouncedSearch && urls.length === 0) {
+              setIsMatch(false);
+            } else {
+              setIsMatch(true);
+            }
           }
+        } catch (error) {
+          console.error(error);
+        } finally {
+          setIsLoading(false);
         }
-      } catch (error) {
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      };
 
-    loadUrls();
+      loadUrls();
+    } else {
+      setIsLoading(false);
+      setIsMatch(false);
+      setUrlInfo([]);
+    }
 
     return () => {
       newAbortController.abort();
@@ -112,6 +122,8 @@ export default function UrlStatusForm() {
 
   const resetSearchHandler = () => {
     setSearch("");
+    setIsMatch(false);
+    setUrlInfo([]);
   };
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
