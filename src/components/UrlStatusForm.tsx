@@ -29,9 +29,25 @@ type FormData = {
 };
 
 const formSchema = z.object({
-  url: z.string().refine((url) => url.trim().length > 0, {
-    message: "URL cannot be empty.",
-  }),
+  url: z
+    .string()
+    .min(1, { message: "Must not be an empty string." })
+    .refine(
+      (data) => {
+        if (data.trim() === "") {
+          return false;
+        }
+        try {
+          new URL(data);
+          return true;
+        } catch (error) {
+          return false;
+        }
+      },
+      {
+        message: "Invalid URL format. Please enter a valid URL.",
+      }
+    ),
 });
 
 export default function UrlStatusForm() {
@@ -40,6 +56,8 @@ export default function UrlStatusForm() {
   const [isMatch, setIsMatch] = useState(false);
   const [urlInfo, setUrlInfo] = useState<FormData[] | []>([]);
   const debouncedSearch = useDebounce(search);
+  const [abortController, setAbortController] =
+    useState<AbortController | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -52,23 +70,44 @@ export default function UrlStatusForm() {
   });
 
   useEffect(() => {
+    if (abortController) {
+      abortController.abort();
+      console.log("Previous request canceled");
+    }
+
+    const newAbortController = new AbortController();
+    setAbortController(newAbortController);
+
     const loadUrls = async () => {
       setIsLoading(true);
 
-      const urls = await fetchURLS(debouncedSearch);
+      try {
+        const urls = await fetchURLS(
+          debouncedSearch,
+          newAbortController.signal
+        );
 
-      setUrlInfo(urls);
+        if (search.trim() === debouncedSearch.trim()) {
+          setUrlInfo(urls);
 
-      if (debouncedSearch && urls.length === 0) {
-        setIsMatch(false);
-      } else {
-        setIsMatch(true);
+          if (debouncedSearch && urls.length === 0) {
+            setIsMatch(false);
+          } else {
+            setIsMatch(true);
+          }
+        }
+      } catch (error) {
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     };
 
     loadUrls();
+
+    return () => {
+      newAbortController.abort();
+      console.log("New request canceled");
+    };
   }, [debouncedSearch]);
 
   const resetSearchHandler = () => {
@@ -76,7 +115,10 @@ export default function UrlStatusForm() {
   };
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    setSearch(values.url);
+    if (form.formState.isValid) {
+      setSearch(values.url);
+      console.log(values.url);
+    }
   };
 
   return (

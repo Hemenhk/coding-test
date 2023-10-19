@@ -14,8 +14,12 @@ export const urls = Array(100)
     fileType: Math.random() < 0.5 ? "file" : "folder"
   }));
 
-export const fetchURLS = async (search: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+export const fetchURLS = async (search: string, signal: AbortSignal) => {
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  if (signal.aborted) {
+    return [];
+  }
+
   const filteredURLs = urls.filter((url) => url.url.includes(search));
 
   const formattedURLs = filteredURLs.map((url) => ({
@@ -23,5 +27,5 @@ export const fetchURLS = async (search: string) => {
     fileType: url.fileType === "file" ? "file" : "folder",
   }));
 
-  return formattedURLs
+  return formattedURLs;
 };
